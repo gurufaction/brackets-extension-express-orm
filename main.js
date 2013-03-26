@@ -16,13 +16,11 @@ define(function (require, exports, module) {
         //FieldDialogTemplate     = require('text!htmlContent/field-dialog.html'),
         OrmModelTemplate        = require('text!templates/orm/model.tpl'),
         RouteModelTemplate      = require('text!templates/express/route.tpl'),
+        ConfigTemplate      = require('text!templates/express/config.tpl'),
+        AppTemplate      = require('text!templates/express/app.tpl'),
         FileUtils               = brackets.getModule("file/FileUtils"),
         NativeFileSystem        = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     
-    // First, register a command - a UI-less object associating an id to a handler
-    var EXPRESS_CONFIG_COMMAND_ID       = "com.gurufaction.express.configure";   // package-style naming to avoid collisions
-    var EXPRESS_ROUTE_COMMAND_ID        = "com.gurufaction.express.route";
-    var EXPRESS_ORM_MODEL_COMMAND_ID    = "com.gurufaction.express.orm.model";
     var projectVars;
     
     function _getFilename(path) {
@@ -68,16 +66,28 @@ define(function (require, exports, module) {
     
     function _readProjectFile() {
         var projectDir = ProjectManager.getProjectRoot();
+        
         projectDir.getFile("project.json", {create: false}, function (fileEntry) {
             FileUtils.readAsText(fileEntry).done(function (rawText, readTimestamp) {
                 projectVars = JSON.parse(rawText);
-                var models = [], model, x;
+                var models = [], model, x, f, fields = [], field;
                 
                 for (x = 0; x < projectVars.MODELS.length; x++) {
+                    fields = [];
+                    for (f = 0; f < projectVars.MODELS[x].FIELDS.length; f++) {
+                        if (projectVars.MODELS[x].FIELDS[f].NAME !== "id") {
+                            field = {
+                                "NAME" : projectVars.MODELS[x].FIELDS[f].NAME,
+                                "TYPE" : (projectVars.MODELS[x].FIELDS[f].TYPE === "int") ? "Number" : (projectVars.MODELS[x].FIELDS[f].TYPE === "datetime") ? "Date" : (projectVars.MODELS[x].FIELDS[f].TYPE === "boolean") ? "Boolean" : "String"
+                            };
+                            fields.push(field);
+                        }
+                    }
+                    fields[fields.length - 1].LAST = true;
                     model = {
                         "ROUTE"     : projectVars.MODELS[x].NAME.toLowerCase(),
                         "NAME"      : projectVars.MODELS[x].NAME,
-                        "FIELDS"    : projectVars.MODELS[x].FIELDS
+                        "FIELDS"    : fields
                     };
                     if (x === projectVars.MODELS.length - 1) {
                         model.LAST = true;
@@ -88,6 +98,12 @@ define(function (require, exports, module) {
                     _createFile(ormFile, OrmModelTemplate, model);
                     _createFile(routeFile, RouteModelTemplate, model);
                 }
+                projectVars.MODELS = models;
+                projectVars.PORT = "8080";
+                var configFile = projectVars.SRC_DIR + "/" + projectVars.SERVER_DIR + "/express/config.js";
+                _createFile(configFile, ConfigTemplate, projectVars);
+                var appFile = projectVars.SRC_DIR + "/" + projectVars.SERVER_DIR + "/app.js";
+                _createFile(appFile, AppTemplate, projectVars);
                 
             }).fail(function (err) {
                 console.log("Error reading text: " + err.name);
@@ -101,7 +117,7 @@ define(function (require, exports, module) {
     function openExpressConfigDialog() {
     }
     
-    function generateModel() {
+    function generateAll() {
         console.log(projectVars);
         console.log("Load Project File.");
         _readProjectFile();
@@ -111,14 +127,19 @@ define(function (require, exports, module) {
     function generateRoute() {
     }
     
-    CommandManager.register("Express Configuration", EXPRESS_CONFIG_COMMAND_ID, openExpressConfigDialog);
-    CommandManager.register("Generate Models", EXPRESS_ORM_MODEL_COMMAND_ID, generateModel);
-    CommandManager.register("Generate Routes", EXPRESS_ROUTE_COMMAND_ID, generateRoute);
+    // First, register a command - a UI-less object associating an id to a handler
+    //var EXPRESS_CONFIG_COMMAND_ID       = "com.gurufaction.express.configure";   // package-style naming to avoid collisions
+    //var EXPRESS_ROUTE_COMMAND_ID        = "com.gurufaction.express.route";
+    var EXPRESS_ALL_COMMAND_ID    = "com.gurufaction.express.all";
+    
+    //CommandManager.register("Express Configuration", EXPRESS_CONFIG_COMMAND_ID, openExpressConfigDialog);
+    CommandManager.register("Generate All", EXPRESS_ALL_COMMAND_ID, generateAll);
+    //CommandManager.register("Generate Routes", EXPRESS_ROUTE_COMMAND_ID, generateRoute);
 
     // Then create a menu item bound to the command
     // The label of the menu item is the name we gave the command (see above)
     var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU);
-    menu.addMenuItem(EXPRESS_CONFIG_COMMAND_ID, "Ctrl-P", Menus.First);
-    menu.addMenuItem(EXPRESS_ROUTE_COMMAND_ID);
-    menu.addMenuItem(EXPRESS_ORM_MODEL_COMMAND_ID);
+    //menu.addMenuItem(EXPRESS_CONFIG_COMMAND_ID, "Ctrl-P", Menus.First);
+    //menu.addMenuItem(EXPRESS_ROUTE_COMMAND_ID);
+    menu.addMenuItem(EXPRESS_ALL_COMMAND_ID);
 });

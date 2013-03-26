@@ -1,8 +1,8 @@
 module.exports = function (app, orm) {
-    app.use(orm.express("{{DATABASE_TYPE}}://{{USERNAME}}:{{PASSWORD}}@{{HOST}}/{{DATABASE}}", {
+    app.use(orm.express("{{PROVIDER}}://{{USERNAME}}:{{PASSWORD}}@{{HOST}}/{{DATABASE}}", {
         define: function (db) {
             {{#MODELS}}
-            db.load("./orm/models/{{NAME}}", function (err) {
+            db.load("./orm/model/{{NAME}}", function (err) {
                 console.log("{{NAME}} Model Loaded.");
             });
             {{/MODELS}}

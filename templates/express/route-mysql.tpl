@@ -1,14 +1,32 @@
-module.exports = function (app) {
+module.exports = function (app, mysql, options) {
+    function getConnection() {
+        return mysql.createConnection(options);
+    }
+    
     app.get("/{{ROUTE}}", function (req, res) {
-        req.db.models.{{NAME}}.find({ }, { limit: req.query.limit, offset: req.query.offset}, function (err, results) {
-            var response = {
-                results : [],
-                success : false
-            };
-            response.total = results.length;
-            response.results = results;
+        var connection = getConnection();
+        connection.query('SELECT * FROM {{NAME}}', function(err, rows, fields) {
+            if (err) res.send(500,err);
+            var response = new Object();
+            response.results = new Array();
+            console.log(rows);
+            if( rows != undefined ) {
+                response.total = rows.length;
+                for(var x in rows)
+                {
+                    var customer = new Object();
+                    customer.id = rows[x].id;
+                    customer.name = rows[x].name;
+                    customer.status = new Object();
+                    customer.status.id = rows[x].status_id;
+                    customer.status.name = rows[x].status_name;
+                    response.results[x] = customer;
+                    console.log(customer);
+                }
+            }
             res.send(response);
         });
+        connection.end();
     });
     
     app.get("/{{ROUTE}}/:id", function (req, res) {
