@@ -64,6 +64,28 @@ define(function (require, exports, module) {
             });
     }
     
+    function getOrmType(type) {
+        var ormType;
+        switch (type) {
+        case "int":
+        case "integer":
+            ormType = "Number";
+            break;
+        case "date":
+        case "datetime":
+            ormType = "Date";
+            break;
+        case "bool":
+        case "boolean":
+            ormType = "Boolean";
+            break;
+        default:
+            ormType = "String";
+            break;
+        }
+        return ormType;
+    }
+    
     function _readProjectFile() {
         var projectDir = ProjectManager.getProjectRoot();
         
@@ -78,7 +100,8 @@ define(function (require, exports, module) {
                         if (projectVars.MODELS[x].FIELDS[f].NAME !== "id") {
                             field = {
                                 "NAME" : projectVars.MODELS[x].FIELDS[f].NAME,
-                                "TYPE" : (projectVars.MODELS[x].FIELDS[f].TYPE === "int") ? "Number" : (projectVars.MODELS[x].FIELDS[f].TYPE === "datetime") ? "Date" : (projectVars.MODELS[x].FIELDS[f].TYPE === "boolean") ? "Boolean" : "String"
+                                "TYPE" : getOrmType(projectVars.MODELS[x].FIELDS[f].TYPE),
+                                "LAST" : false
                             };
                             fields.push(field);
                         }
@@ -87,17 +110,17 @@ define(function (require, exports, module) {
                     model = {
                         "ROUTE"     : projectVars.MODELS[x].NAME.toLowerCase(),
                         "NAME"      : projectVars.MODELS[x].NAME,
-                        "FIELDS"    : fields
+                        "FIELDS"    : fields,
+                        "LAST"      : false
                     };
-                    if (x === projectVars.MODELS.length - 1) {
-                        model.LAST = true;
-                    }
+                    console.log(model);
                     models.push(model);
                     var ormFile = projectVars.SRC_DIR + "/" + projectVars.SERVER_DIR + "/orm/model/" + model.NAME + ".js";
                     var routeFile = projectVars.SRC_DIR + "/" + projectVars.SERVER_DIR + "/express/route/" + model.NAME + ".js";
                     _createFile(ormFile, OrmModelTemplate, model);
                     _createFile(routeFile, RouteModelTemplate, model);
                 }
+                models[models.length - 1].LAST = true;
                 projectVars.MODELS = models;
                 projectVars.PORT = "8080";
                 var configFile = projectVars.SRC_DIR + "/" + projectVars.SERVER_DIR + "/express/config.js";
