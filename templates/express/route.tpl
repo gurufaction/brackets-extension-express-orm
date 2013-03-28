@@ -1,12 +1,17 @@
 module.exports = function (app) {
     app.get("/{{ROUTE}}", function (req, res) {
-        req.db.models.{{NAME}}.find({ }, { limit: req.query.limit, offset: req.query.offset}, function (err, results) {
+        req.db.models.{{NAME}}.find().limit(parseInt(req.query.limit)).offset(parseInt(req.query.start)).run(function (err, results) {
             var response = {
                 results : [],
                 success : false
             };
-            response.total = results.length;
-            response.results = results;
+            
+            if (err){
+                response.error = err;
+            } else{
+                response.total = results.length;
+                response.results = results;
+            }
             res.send(response);
         });
     });
